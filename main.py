@@ -1,5 +1,9 @@
 import json
+import os.path
 import random
+
+MIN_VALUE = 1
+MAX_VALUE = 99999999
 
 def main():
     while True:
@@ -26,11 +30,32 @@ def main():
 
 
 def add_book():
-    id = random.randint(0, 99999999)
     title = input("Введите название книги: ")
     author = input("Введите автора книги: ")
-    year = input("Введите год книги: ")
+    while True:
+        year = input("Введите год книги: ")
+        if year.isdigit():
+            year = int(year)
+            break
+        else:
+            print("\nДолжно быть целое число")
     status = "в наличии"
+    try:
+        with open("data_base.json", "r", encoding="utf-8") as db:
+            try:
+                books = json.load(db)
+            except:
+                books = []
+    except FileNotFoundError:
+        books = []
+
+    used_id = [book["id"] for book in books]
+    id = unique_id_generator()
+    if len(books) == MAX_VALUE:
+        raise Exception("База данных переполнена")
+    while id in used_id:
+        id = unique_id_generator()
+
     book = {
         "id": id,
         "title": title,
@@ -38,11 +63,6 @@ def add_book():
         "year": year,
         "status": status,
     }
-    try:
-        with open("data_base.json", "r", encoding="utf-8") as db:
-            books = json.load(db)
-    except:
-        books = []
     books.append(book)
 
     with open("data_base.json", "w", encoding="utf-8") as db:
@@ -51,10 +71,24 @@ def add_book():
 
 
 def delete_book():
+    if not os.path.exists("data_base.json"):
+        print("\nБаза данных пуста\n")
+        main()
+    while True:
+        user_input_id = input("Введите ID книги, которую хотите удалить (для просмотра всех книг напишите show, "
+                              "используйте exit для выхода): ")
+        if user_input_id == "show":
+            show_all_books()
+        elif user_input_id == "exit":
+            main()
+        elif user_input_id.isdigit():
+            break
+        else:
+            print("ID должен быть целым числом")
+    user_input_id = int(user_input_id)
     try:
         with open("data_base.json", "r", encoding="utf-8") as db:
             books = json.load(db)
-            user_input_id = int(input("Введите ID книги, которую хотите удалить: "))
             found = False
             for book in books:
                 if book["id"] == user_input_id:
@@ -76,7 +110,8 @@ def search_book():
             print("Введите как хотите искать книгу: ")
             search_method = int(input("1 - По названию\n"
                                       "2 - По автору\n"
-                                      "3 - По году: \n"))
+                                      "3 - По году \n"
+                                      "4 - Выход в меню\n"))
 
             if search_method == 1:
                 user_input_title = input("Введите название книги: ")
@@ -97,66 +132,95 @@ def search_book():
                 user_input_author = input('Введите автора книги: ')
                 found = False
                 for book in books:
-                    if book["title"] == user_input_author:
+                    if book["author"] == user_input_author:
                         print(f'ID = {book["id"]}\n'
                               f'Название = {book["title"]}\n'
                               f'Автор = {book["author"]}\n'
                               f'Год = {book["year"]}\n'
                               f'Статус = {book["status"]}\n')
-                    if found == False:
-                        print("\nТакой книги нет в нашей библиотеке\n")
+                        found = True
+                if found == False:
+                    print("\nТакой книги нет в нашей библиотеке\n")
                 main()
 
             if search_method == 3:
-                user_input_year = input("Введите год: ")
+                while True:
+                    user_input_year = input("Введите год: ")
+                    if user_input_year.isdigit():
+                        user_input_year = int(user_input_year)
+                        break
                 found = False
                 for book in books:
-                    if book["title"] == user_input_year:
+                    if book["year"] == user_input_year:
                         print(f'ID = {book["id"]}\n'
                               f'Название = {book["title"]}\n'
                               f'Автор = {book["author"]}\n'
                               f'Год = {book["year"]}\n'
                               f'Статус = {book["status"]}\n')
-                    if found == False:
-                        print("\nТакой книги нет в нашей библиотеке\n")
+                        found = True
+                if found == False:
+                    print("\nТакой книги нет в нашей библиотеке\n")
+                main()
+            elif search_method == 4:
                 main()
             else:
                 print('\nНесуществующее действие!!!\n')
                 main()
     except:
-        print("Не найдено книг в базе данных\n")
+        print("\nНе найдено книг в базе данных\n")
 
 
 def show_all_books():
-    with open("data_base.json", "r", encoding="utf-8") as db:
-        books = json.load(db)
-        for book in books:
-            print(f'ID = {book["id"]}\n'
-                  f'Название = {book["title"]}\n'
-                  f'Автор = {book["author"]}\n'
-                  f'Год = {book["year"]}\n'
-                  f'Статус = {book["status"]}\n')
-
-
-def change_book_status():
     try:
         with open("data_base.json", "r", encoding="utf-8") as db:
             books = json.load(db)
-            user_input_id = int(input("Введите ID книги, статус которой надо поменять: "))
+            for book in books:
+                print(f'ID = {book["id"]}\n'
+                      f'Название = {book["title"]}\n'
+                      f'Автор = {book["author"]}\n'
+                      f'Год = {book["year"]}\n'
+                      f'Статус = {book["status"]}\n')
+    except:
+        print("\nКниг в базе данных не обнаружено\n")
+
+
+def change_book_status():
+    if not os.path.exists("data_base.json"):
+        print("\nБаза данных пуста\n")
+        main()
+    while True:
+        user_input_id = input("Введите ID книги, статус которой надо поменять (используйте exit для выхода): ")
+        if user_input_id == "exit":
+            main()
+        elif user_input_id.isdigit():
+            user_input_id = int(user_input_id)
+            break
+        print("ID должен быть целым числом\n")
+
+    try:
+        with open("data_base.json", "r", encoding="utf-8") as db:
+            books = json.load(db)
             found = False
             for book in books:
                 if book["id"] == user_input_id:
                     user_input_status = input("Введите новый статус(в наличии/выдана): ")
-                    with open("data_base.json", "w", encoding="utf-8") as db_status_changer:
-                        book["status"] = user_input_status
-                        json.dump(books, db_status_changer, ensure_ascii=False, indent=4)
-                    print("\nСтатус был изменен\n")
+                    if user_input_status != "в наличии" and user_input_status != "выдана":
+                        print("\nТакого статуса не может быть\n")
+                        main()
+                    else:
+                        with open("data_base.json", "w", encoding="utf-8") as db_status_changer:
+                            book["status"] = user_input_status
+                            json.dump(books, db_status_changer, ensure_ascii=False, indent=4)
+                        print("\nСтатус был изменен\n")
                     found = True
             if found == False:
                 print("\nТакой книги не найдено\n")
     except:
         print("\nНе найдено книг в базе данных\n")
 
+def unique_id_generator():
+    id = random.randint(MIN_VALUE, MAX_VALUE)
+    return id
 
 if __name__ == "__main__":
     main()
